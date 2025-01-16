@@ -62,7 +62,7 @@ static void at_wifi_statistics_task(void *params)
 
 esp_err_t esp_at_netif_init(void)
 {
-#ifdef CONFIG_AT_WIFI_COMMAND_SUPPORT
+#if defined(CONFIG_AT_WIFI_COMMAND_SUPPORT) || defined(CONFIG_AT_ETHERNET_SUPPORT)
     return esp_netif_init();
 #else
     return ESP_OK;
@@ -78,7 +78,12 @@ static void at_module_init(void)
                    "compile time(%s):%s %s\r\n", ESP_AT_PROJECT_COMMIT_ID, __DATE__, __TIME__);
 
 #ifdef CONFIG_ESP_AT_FW_VERSION
-    printf("%s\r\n", CONFIG_ESP_AT_FW_VERSION);
+#ifdef ESP_AT_FIRMWARE_FROM
+    printf("%s (%s)\r\n", CONFIG_ESP_AT_FW_VERSION, ESP_AT_FIRMWARE_FROM);
+#else
+    printf("%s (unknown)\r\n", CONFIG_ESP_AT_FW_VERSION);
+#endif
+
     ret = snprintf((char *)version + ret, AT_TEMP_BUFFER_SIZE - ret,
                    "Bin version:%s(%s)\r\n", CONFIG_ESP_AT_FW_VERSION, esp_at_get_current_module_name());
 #endif
@@ -121,6 +126,14 @@ static void at_bt_controller_mem_release(void)
 #endif
 }
 #endif
+
+__attribute__((weak)) void esp_at_ready_before(void)
+{
+#ifdef CONFIG_AT_SELF_COMMAND_SUPPORT
+    at_exe_cmd("AT+GMR\r\n", "OK", 1000);
+    at_exe_cmd("AT+SYSRAM?\r\n", "OK", 1000);
+#endif
+}
 
 static esp_err_t at_module_config_init(void)
 {
@@ -332,6 +345,9 @@ void esp_at_init(void)
     // set the AT command terminator
     at_cmd_set_terminator(CONFIG_AT_COMMAND_TERMINATOR);
 #endif
+
+    // do some special things before AT is ready
+    esp_at_ready_before();
 
     esp_at_ready();
     ESP_LOGD(TAG, "esp_at_init done");

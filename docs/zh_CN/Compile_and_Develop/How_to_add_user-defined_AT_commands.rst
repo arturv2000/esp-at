@@ -1,20 +1,24 @@
 添加自定义 AT 命令
-=====================
+====================
+
+{IDF_TARGET_VER: default="undefined", esp32="5.0", esp32c2="5.0", esp32c3="5.0", esp32c6="5.1", esp32s2="5.0"}
 
 :link_to_translation:`en:[English]`
 
-本文档详细介绍了如何在 `ESP-AT <https://github.com/espressif/esp-at>`_ 工程中添加用户定义的 AT 命令，以 ``AT+TEST`` 命令为例展示每个步骤的示例代码。
+本文档介绍了如何添加自定义的 AT 命令，以 `at_custom_cmd <https://github.com/espressif/esp-at/tree/master/examples/at_custom_cmd>`_ 为例，展示每个步骤的示例代码。
 
-自定义一个基本的、功能良好的命令至少需要以下两个步骤。
+自定义基本的、功能良好的命令，请参考以下步骤。
 
 - :ref:`define-at-commands`
 - :ref:`register-at-commands`
+- :ref:`add-component_dependencies`
+- :ref:`add-link_options`
+- :ref:`set-component-env-and-compile`
+- :ref:`user-compile_at`
 
-这一步介绍新命令的运行及响应情况。
+正确完成上述步骤后，请 :ref:`user-at-cmd-give-it-a-try`。
 
-- :ref:`user-define-at-commands-give-it-a-try`
-
-其余的步骤适用于定义相对复杂的命令，可根据您的需要进行选择。
+自定义相对复杂的命令，参考示例如下：
 
 - :ref:`define-return-values`
 - :ref:`access-command-parameters`
@@ -24,12 +28,19 @@
 
 AT 命令集的源代码不开源，以 :component:`库文件 <at/lib>` 的形式呈现，它也是解析自定义的 AT 命令的基础。
 
+.. _step-define_at_command:
+
+自定义 AT 命令
+-----------------
+
 .. _define-at-commands:
 
-定义 AT 命令
-------------------
+第一步：定义 AT 命令
+***********************
 
-在定义 AT 命令之前，请先决定 AT 命令的名称和类型。
+您可在 `at_custom_cmd.c <https://github.com/espressif/esp-at/blob/master/examples/at_custom_cmd/custom/at_custom_cmd.c>`_ 和 `at_custom_cmd.h <https://github.com/espressif/esp-at/blob/master/examples/at_custom_cmd/include/at_custom_cmd.h>`_ 文件中定义 AT 命令，也可在 `examples/at_custom_cmd/custom <https://github.com/espressif/esp-at/tree/master/examples/at_custom_cmd/custom/>`_ 和 `examples/at_custom_cmd/include <https://github.com/espressif/esp-at/blob/master/examples/at_custom_cmd/include/>`_ 目录下创建新的源文件和头文件定义 AT 命令。
+
+在自定义 AT 命令之前，请先确定 AT 命令的名称和类型。
 
 **命令命名规则：**
 
@@ -40,121 +51,202 @@ AT 命令集的源代码不开源，以 :component:`库文件 <at/lib>` 的形�
 
 每条 AT 命令最多可以有四种类型：测试命令、查询命令、设置命令和执行命令，更多信息参见 :ref:`at-command-types`。
 
-然后，定义所需类型的命令。假设 ``AT+TEST`` 支持所有的四种类型，下面是定义每种类型的示例代码。
+然后，定义所需类型的命令。假设 ``AT+TEST`` 支持所有的四种类型，下面是定义 AT 命令的名称和所需支持的类型，以及定义每种类型的示例代码。
 
-测试命令：
+- 首先，调用 :cpp:type:`esp_at_cmd_struct` 来定义 AT 命令的名称和所需支持的类型，下面的示例代码定义了名称为 ``+TEST``（省略了 ``AT``）并支持所有四种类型的命令。
 
-.. code-block:: c
+    .. code-block:: c
+    
+        static const esp_at_cmd_struct at_custom_cmd[] = {
+            {"+TEST", at_test_cmd_test, at_query_cmd_test, at_setup_cmd_test, at_exe_cmd_test},
+            /**
+             * @brief 您可以在此处定义自己的 AT 命令
+             */
+        };
+    
+    .. note::
+      如果不定义某个类型，将其设置为 ``NULL``。
 
-    uint8_t at_test_cmd_test(uint8_t *cmd_name)
-    {
-        uint8_t buffer[64] = {0};
+- 测试命令：
 
-        snprintf((char *)buffer, 64, "this cmd is test cmd: %s\r\n", cmd_name);
+    .. code-block:: c
+    
+        static uint8_t at_test_cmd_test(uint8_t *cmd_name)
+        {
+            uint8_t buffer[64] = {0};
+            snprintf((char *)buffer, 64, "test command: <AT%s=?> is executed\r\n", cmd_name);
+            esp_at_port_write_data(buffer, strlen((char *)buffer));
+    
+            return ESP_AT_RESULT_CODE_OK;
+        }
+    
+- 查询命令：
 
-        esp_at_port_write_data(buffer, strlen((char *)buffer));
-
-        return ESP_AT_RESULT_CODE_OK;
-    }
-
-查询命令：
-
-.. code-block:: c
-
-    uint8_t at_query_cmd_test(uint8_t *cmd_name)
-    {
-        uint8_t buffer[64] = {0};
-
-        snprintf((char *)buffer, 64, "this cmd is query cmd: %s\r\n", cmd_name);
-
-        esp_at_port_write_data(buffer, strlen((char *)buffer));
-
-        return ESP_AT_RESULT_CODE_OK;
-    }
+    .. code-block:: c
+    
+        static uint8_t at_query_cmd_test(uint8_t *cmd_name)
+        {
+            uint8_t buffer[64] = {0};
+            snprintf((char *)buffer, 64, "query command: <AT%s?> is executed\r\n", cmd_name);
+            esp_at_port_write_data(buffer, strlen((char *)buffer));
+    
+            return ESP_AT_RESULT_CODE_OK;
+        }
 
 .. _user-defined-set-command:
 
-设置命令：
+- 设置命令：
 
-.. code-block:: c
-
-    uint8_t at_setup_cmd_test(uint8_t para_num)
-    {
-        int32_t para_int_1 = 0;
-        uint8_t *para_str_2 = NULL;
-        uint8_t num_index = 0;
-        uint8_t buffer[64] = {0};
-
-        if (esp_at_get_para_as_digit(num_index++, &para_int_1) != ESP_AT_PARA_PARSE_RESULT_OK) {
-            return ESP_AT_RESULT_CODE_ERROR;
+    .. code-block:: c
+    
+        static uint8_t at_setup_cmd_test(uint8_t para_num)
+        {
+            uint8_t index = 0;
+    
+            // 获取第一个参数，并将其解析为一个数字
+            int32_t digit = 0;
+            if (esp_at_get_para_as_digit(index++, &digit) != ESP_AT_PARA_PARSE_RESULT_OK) {
+                return ESP_AT_RESULT_CODE_ERROR;
+            }
+    
+            // 获取第二个参数，并将其解析为一个字符串
+            uint8_t *str = NULL;
+            if (esp_at_get_para_as_str(index++, &str) != ESP_AT_PARA_PARSE_RESULT_OK) {
+                return ESP_AT_RESULT_CODE_ERROR;
+            }
+    
+            // 分配一个缓冲区，构建数据，然后通过接口 (uart/spi/sdio/socket) 将数据发送到 MCU
+            uint8_t *buffer = (uint8_t *)malloc(512);
+            if (!buffer) {
+                return ESP_AT_RESULT_CODE_ERROR;
+            }
+            int len = snprintf((char *)buffer, 512, "setup command: <AT%s=%d,\"%s\"> is executed\r\n",
+                               esp_at_get_current_cmd_name(), digit, str);
+            esp_at_port_write_data(buffer, len);
+    
+            // 记得释放缓冲区
+            free(buffer);
+    
+            return ESP_AT_RESULT_CODE_OK;
         }
 
-        if (esp_at_get_para_as_str(num_index++, &para_str_2) != ESP_AT_PARA_PARSE_RESULT_OK) {
-            return ESP_AT_RESULT_CODE_ERROR;
+- 执行命令：
+
+    .. code-block:: c
+    
+        static uint8_t at_exe_cmd_test(uint8_t *cmd_name)
+        {
+            uint8_t buffer[64] = {0};
+            snprintf((char *)buffer, 64, "execute command: <AT%s> is executed\r\n", cmd_name);
+            esp_at_port_write_data(buffer, strlen((char *)buffer));
+    
+            return ESP_AT_RESULT_CODE_OK;
         }
-
-        snprintf((char *)buffer, 64, "this cmd is setup cmd and cmd num is: %u\r\n", para_num);
-        esp_at_port_write_data(buffer, strlen((char *)buffer));
-
-        memset(buffer, 0, 64);
-        snprintf((char *)buffer, 64, "first parameter is: %d\r\n", para_int_1);
-        esp_at_port_write_data(buffer, strlen((char *)buffer));
-
-        memset(buffer, 0, 64);
-        snprintf((char *)buffer, 64, "second parameter is: %s\r\n", para_str_2);
-        esp_at_port_write_data(buffer, strlen((char *)buffer));
-
-        return ESP_AT_RESULT_CODE_OK;
-    }
-
-执行命令：
-
-.. code-block:: c
-
-    uint8_t at_exe_cmd_test(uint8_t *cmd_name)
-    {
-        uint8_t buffer[64] = {0};
-
-        snprintf((char *)buffer, 64, "this cmd is execute cmd: %s\r\n", cmd_name);
-
-        esp_at_port_write_data(buffer, strlen((char *)buffer));
-
-        return ESP_AT_RESULT_CODE_OK;
-    }
-
-最后，调用 :cpp:type:`esp_at_cmd_struct` 来定义 AT 命令的名称和支持的类型，下面的示例代码定义了名称为 ``+TEST``（省略了 ``AT``） 并支持所有四种类型的命令。
-
-.. code-block:: c
-
-    static esp_at_cmd_struct at_custom_cmd[] = {
-        {"+TEST", at_test_cmd_test, at_query_cmd_test, at_setup_cmd_test, at_exe_cmd_test},
-    };
-
-如果不定义某个类型，将其设置为 ``NULL``。
 
 .. _register-at-commands:
 
-注册 AT 命令
---------------------
+第二步：定义注册 AT 命令函数
+************************************
 
-调用 API :cpp:func:`esp_at_custom_cmd_array_regist` 来注册 AT 命令，以下是注册 ``AT+TEST`` 的示例代码。
+- 请定义 :cpp:type:`esp_at_custom_cmd_register` 函数，并在函数中调用 API :cpp:func:`esp_at_custom_cmd_array_regist` 注册 AT 命令。
 
-.. code-block:: c
+  示例代码：
+
+  .. code-block:: c
   
-  esp_at_custom_cmd_array_regist(at_custom_cmd, sizeof(at_custom_cmd) / sizeof(at_custom_cmd[0]));
+      bool esp_at_custom_cmd_register(void)
+      {
+          return esp_at_custom_cmd_array_regist(at_custom_cmd, sizeof(at_custom_cmd) / sizeof(esp_at_cmd_struct));
+      }
+
+- 然后，调用 API `ESP_AT_CMD_SET_INIT_FN <https://github.com/espressif/esp-at/blob/113702d9bf0224ed15e873bdc09898e804f4bd28/components/at/include/esp_at_cmd_register.h#L67>`_ 来初始化您实现的注册 AT 命令函数 :cpp:type:`esp_at_custom_cmd_register`。
+
+  示例代码：
+  
+  .. code-block:: c
+  
+      ESP_AT_CMD_SET_INIT_FN(esp_at_custom_cmd_register, 1);
 
 .. note::
+  如果您是在 ``examples/at_custom_cmd/custom`` 和 ``examples/at_custom_cmd/include`` 目录下创建新的源文件和头文件自定义 AT 命令，请避免将注册函数命名为 :cpp:type:`esp_at_custom_cmd_register`，因为该函数在 `at_custom_cmd <https://github.com/espressif/esp-at/tree/master/examples/at_custom_cmd>`_ 示例中已被定义和初始化。您可以将函数命名为 :cpp:type:`esp_at_custom_cmd_register_foo`，然后使用 :cpp:enumerator:`ESP_AT_CMD_SET_INIT_FN` 初始化该函数。
 
-  建议把 ``esp_at_custom_cmd_array_regist`` 加入 ``app_main()`` 中的 ``at_custom_init()``。
+.. _add-component_dependencies:
 
-.. _user-define-at-commands-give-it-a-try:
+第三步：增加组件依赖
+***********************************
 
-尝试一下吧
--------------
+如果您在 :ref:`define-at-commands` 时使用了除 `at <https://github.com/espressif/esp-at/tree/master/components/at>`_、 `freertos <https://github.com/espressif/esp-idf/tree/release/v{IDF_TARGET_VER}/components/freertos>`_、 `nvs_flash <https://github.com/espressif/esp-idf/tree/release/v{IDF_TARGET_VER}/components/nvs_flash>`_ 外其他组件，请在 ``examples/at_custom_cmd/CMakeLists.txt`` 文件中添加这些组件依赖。反之，可以跳过此步骤。例如新增使用 `lwip <https://github.com/espressif/esp-idf/tree/release/v{IDF_TARGET_VER}/components/lwip>`_ 组件，则示例代码如下：
 
-如果你已经完成了上述两个步骤，请编译 ESP-AT 工程并烧录固件，该命令即可在您的设备上正常运行。尝试运行一下吧！
+.. code-block:: none
 
-下面是 ``AT+TEST`` 的运行情况。
+    set(require_components at freertos nvs_flash lwip)
+
+.. _add-link_options:
+
+第四步：增加链接选项
+**************************
+
+请在 ``examples/at_custom_cmd/CMakeLists.txt`` 文件中，将自定义的 :ref:`注册 AT 命令函数 <register-at-commands>` 名称作为一个链接选项强制链接给 ${COMPONENT_LIB}，确保程序运行时可以找到该函数。示例代码如下：
+
+.. code-block:: none
+
+    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_at_custom_cmd_register")
+
+.. note::
+  如果自定义的 :ref:`注册 AT 命令函数 <register-at-commands>` 名称为 :cpp:type:`esp_at_custom_cmd_register_foo`，则示例代码如下：
+
+  .. code-block:: none
+
+      target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_at_custom_cmd_register_foo")
+
+.. _set-component-env-and-compile:
+
+第五步：设置组件环境变量
+*****************************
+
+本节介绍了两种设置 ``at_custom_cmd`` 组件环境变量的方法，以确保 ESP-AT 项目在编译时能够正确找到该组件。根据您的需求选择适合的方法。如果您在 ``esp-at/components`` 目录下的原始组件中自定义 AT 命令或修改代码，则无需执行此步骤。但不建议在 ``esp-at/components`` 目录下的原始组件中自定义 AT 命令，本文也不对此进行说明。
+
+**方法 1：** 在命令行中设置 ``AT_CUSTOM_COMPONENTS`` 环境变量（适用于 :doc:`本地编译 <../Compile_and_Develop/How_to_clone_project_and_compile_it>`）。
+
+    - Linux or macOS
+
+    .. code-block:: none
+
+        export AT_CUSTOM_COMPONENTS=(path_of_at_custom_cmd)
+    
+    - Windows
+
+    .. code-block:: none
+
+        set AT_CUSTOM_COMPONENTS=(path_of_at_custom_cmd)
+
+    .. note::
+      - 请将 ``(path_of_at_custom_cmd)`` 替换为 ``at_custom_cmd`` 目录的真实绝对路径。
+      - 您可以指定多个组件。例如：
+
+        ``export AT_CUSTOM_COMPONENTS="~/prefix/my_path1 ~/prefix/my_path2"``
+
+**方法 2：** 在 `esp-at/build.py <https://github.com/espressif/esp-at/tree/master/build.py>`_ 文件 :cpp:type:`setup_env_variables()` 函数中加入设置 ``AT_CUSTOM_COMPONENTS`` 环境变量的代码（适用于 :doc:`本地编译 <../Compile_and_Develop/How_to_clone_project_and_compile_it>` 和 :doc:`网页编译 <../Compile_and_Develop/How_to_build_project_with_web_page>`）。示例代码如下：
+
+    .. code-block:: none
+
+        # set AT_CUSTOM_COMPONENTS
+        at_custom_cmd_path=os.path.join(os.getcwd(), 'examples/at_custom_cmd')
+        os.environ['AT_CUSTOM_COMPONENTS']=at_custom_cmd_path
+
+.. _user-compile_at:
+
+第六步：编译 AT 固件
+*****************************
+
+完成以上步骤后，可根据需要选择通过 :doc:`网页编译 <../Compile_and_Develop/How_to_build_project_with_web_page>` 或 :doc:`本地编译 <../Compile_and_Develop/How_to_clone_project_and_compile_it>` AT 固件，并将其 :doc:`烧录 <../Get_Started/Downloading_guide>` 到您的设备上。
+
+.. _user-at-cmd-give-it-a-try:
+
+运行 ``AT+TEST`` 命令获取运行结果
+------------------------------------
+
+正确操作上面步骤后，运行 ``AT+TEST`` 命令获取结果如下。
 
 **测试命令：**
 
@@ -167,7 +259,7 @@ AT 命令集的源代码不开源，以 :component:`库文件 <at/lib>` 的形�
 .. code-block:: none
 
     AT+TEST=?
-    this cmd is test cmd: +TEST
+    test command: <AT+TEST=?> is executed
 
     OK
 
@@ -182,7 +274,7 @@ AT 命令集的源代码不开源，以 :component:`库文件 <at/lib>` 的形�
 .. code-block:: none
 
     AT+TEST?
-    this cmd is query cmd: +TEST
+    query command: <AT+TEST?> is executed
 
     OK
 
@@ -197,9 +289,7 @@ AT 命令集的源代码不开源，以 :component:`库文件 <at/lib>` 的形�
 .. code-block:: none
 
     AT+TEST=1,"espressif"
-    this cmd is setup cmd and cmd num is: 2
-    first parameter is: 1
-    second parameter is: espressif
+    setup command: <AT+TEST=1,"espressif"> is executed
 
     OK
 
@@ -214,14 +304,19 @@ AT 命令集的源代码不开源，以 :component:`库文件 <at/lib>` 的形�
 .. code-block:: none
 
     AT+TEST
-    this cmd is execute cmd: +TEST
+    execute command: <AT+TEST> is executed
 
     OK
+
+自定义复杂的 AT 命令
+--------------------------
+
+下面列举的示例代码适用于定义更加复杂的命令，请根据实际需要进行自定义。
 
 .. _define-return-values:
 
 定义返回消息
----------------------
+****************
 
 ESP-AT 已经在 :cpp:type:`esp_at_result_code_string_index` 定义了一些返回消息，更多返回消息请参见 :ref:`at-messages`。
 
@@ -262,19 +357,19 @@ ESP-AT 已经在 :cpp:type:`esp_at_result_code_string_index` 定义了一些返�
 .. _access-command-parameters:
 
 获取命令参数
--------------
+*********************
 
 ESP-AT 提供以下两个 API 获取命令参数。
 
 - :cpp:func:`esp_at_get_para_as_digit` 可获取数字参数。
 - :cpp:func:`esp_at_get_para_as_str` 可获取字符串参数。
 
-示例请见 :ref:`执行命令 <user-defined-set-command>`。
+示例请见 :ref:`设置命令 <user-defined-set-command>`。
 
 .. _omit-command-parameters:
 
 省略命令参数
-------------------------
+***********************
 
 本节介绍如何设置某些命令参数为可选参数。
 
@@ -460,7 +555,7 @@ ESP-AT 提供以下两个 API 获取命令参数。
 .. _block-command-execution:
 
 阻塞命令的执行
-----------------
+******************
 
 有时您想阻塞某个命令的执行，等待另一个执行结果，然后系统基于这个结果可能会返回不同的值。
 
@@ -498,7 +593,7 @@ ESP-AT 提供以下两个 API 获取命令参数。
 .. _access-input-data-from-at-command-port:
 
 从 AT 命令端口获取输入的数据
--------------------------------
+************************************************************
 
 ESP-AT 支持从 AT 命令端口访问输入的数据，为此提供以下两个 API。
 

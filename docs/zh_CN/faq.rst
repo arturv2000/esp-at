@@ -97,7 +97,7 @@ Wi-Fi 常见的兼容性问题有哪些？
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   - AMPDU 兼容性问题。
-  
+
     - 如果路由器不支持 AMPDU，那么 {IDF_TARGET_NAME} 会在和路由器交互时，自动关闭 AMPDU 功能。
     - 如果路由器支持 AMPDU，但是路由器和 {IDF_TARGET_NAME} 之间的 AMPDU 传输存在兼容性问题，那么建议关闭路由器的 AMPDU 功能或者 {IDF_TARGET_NAME} 的 AMPDU 功能。如果您要禁用 {IDF_TARGET_NAME} 的 AMPDU 功能，请自行 :doc:`编译 ESP-AT 工程 <../Compile_and_Develop/How_to_clone_project_and_compile_it>`，在第五步配置工程里选择：
 
@@ -110,13 +110,6 @@ ESP-AT 命令是否支持 ESP-WIFI-MESH？
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   ESP-AT 当前不支持 ESP-WIFI-MESH。
-
-AT 是否支持 websocket 命令？
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-  - 默认命令不支持 websocket 命令。
-  - 可通过自定义命令实现，代码参考 `websocket <https://github.com/espressif/esp-idf/tree/master/examples/protocols/websocket>`_，以及 :doc:`Compile_and_Develop/How_to_add_user-defined_AT_commands`。
-
 
 是否有 AT 命令连接阿里云以及腾讯云示例？
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -156,7 +149,7 @@ AT 命令中串口波特率是否可以修改？（默认：115200）
   - 第一种方法，您可以通过串口命令 :ref:`AT+UART_CUR <cmd-UARTC>` 或 :ref:`AT+UART_DEF <cmd-UARTD>`。
   - 第二种方法，您可以重新编译 AT 固件，编译介绍： :doc:`如何编译 AT 工程 <Compile_and_Develop/How_to_clone_project_and_compile_it>` 与 :doc:`修改 UART 波特率配置 <Compile_and_Develop/How_to_set_AT_port_pin>`。
 
-{IDF_TARGET_NAME} 使用 AT 指令进入透传模式，如果连接的热点断开，{IDF_TARGET_NAME} 能否给出相应的提示信息？
+{IDF_TARGET_NAME} 使用 AT 命令进入透传模式，如果连接的热点断开，{IDF_TARGET_NAME} 能否给出相应的提示信息？
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   - 可以通过命令 :ref:`AT+SYSMSG <cmd-SYSMSG>` 进行配置，可设置 AT+SYSMSG=4，如果连接的热点断开，串口会上报 "WIFI DISCONNECT\\r\\n"。
@@ -180,12 +173,12 @@ AT 命令中串口波特率是否可以修改？（默认：115200）
 
     AT+BLEGATTCWR=0,3,6,1,2
     >
-    // 写 0x01
+    // 写低位 0x01 高位 0x00（如果要使用 hex 格式写的话就是：0100）
     OK
     // server: +WRITE:0,1,6,1,2,<0x01>,<0x00>
     AT+BLEGATTCWR=0,3,7,1,2
     >
-    // 写 0x02
+    // 写低位 0x02 高位 0x00（如果要使用 hex 格式写的话就是：0200）
     OK
     // server: +WRITE:0,1,6,1,2,<0x02>,<0x00>
     // 写 ccc 是 server 可以发送 notify 和 indicate 的前提条件
@@ -240,6 +233,19 @@ ESP-AT 固件中 TCP 发送窗口大小是否可以修改？
   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     办公室开放环境下，串口波特率为 2000000 时，ESP-AT Bluetooth 平均传输速率为 0.56 Mbps，ESP-AT Bluetooth LE 平均传输速率为 0.101 Mbps。
+
+如何修改 {IDF_TARGET_NAME} AT 默认 TCP 数据段最大重传次数？
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  默认情况下，AT 的 TCP 数据段重传最大次数为 6 次。您可以通过以下方式重新配置 TCP 数据段重传最大次数（取值范围为：[3-12]）：
+
+  - 请参考 :doc:`本地编译 ESP-AT 工程 <../Compile_and_Develop/How_to_clone_project_and_compile_it>` 文档自行编译 AT 固件，在第五步中，请配置 ``Maximum number of retransmissions of data segments``：
+  
+    ::
+
+      python build.py menuconfig > Component config > LWIP > TCP > Maximum number of retransmissions of data segments
+
+  - 请参考 :doc:`网页编译 ESP-AT 工程 <../Compile_and_Develop/How_to_build_project_with_web_page>` 文档自行编译 AT 固件，在第五步的第三小点中，请修改 `CONFIG_LWIP_TCP_MAXRTX <https://docs.espressif.com/projects/esp-idf/en/latest/{IDF_TARGET_PATH_NAME}/api-reference/kconfig.html#config-lwip-tcp-maxrtx>`_ 的值。
 
 其他
 ----
@@ -297,3 +303,11 @@ AT 如何使能调试日志？
     - 使能 Wi-Fi debug： ``./build.py menuconfig`` > ``Component config`` > ``Wi-Fi`` > ``Wi-Fi debug log level`` 设置到 ``Debug``。
     - 使能 TCP/IP debug： ``./build.py menuconfig`` > ``Component config`` > ``LWIP`` > ``Enable LWIP Debug`` > 将具体想要调试的部分 log 等级设置到 ``Debug``。
     - 使能 BLE debug： ``./build.py menuconfig`` > ``Component config`` > ``Bluetooth`` > ``Bluedroid Options`` > ``Disable BT debug logs`` > ``BT DEBUG LOG LEVEL`` > 将具体想要调试的部分 log 等级设置到 ``Debug``。
+
+AT 指令如何实现 HTTP 断点续传功能？
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  - 目前 AT 指令提供两种方法：
+
+    - 通过 HTTP 的 Range 字段指定读取的数据范围，具体详情请参考 :ref:`AT+HTTPCHEAD 示例 <cmd-HTTPCHEAD_example>`。
+    - 可以使用 AT TCP 系列指令自行构造 HTTP GET 请求。在 :ref:`{IDF_TARGET_NAME} 设备获取被动接收模式下的套接字数据示例 <example-passive_recv>` 的第 6 步和第 7 步之间，添加一步：设备使用 :ref:`AT+CIPSEND <cmd-SEND>` 命令发送您自行构造的 HTTP GET 请求包给服务端即可。在被动接收模式下，对于从服务端获取的 HTTP GET 请求数据，MCU 需要通过主动下发 :ref:`AT+CIPRECVDATA <cmd-CIPRECVDATA>` 命令来读取这些数据，以避免因服务端传输大量数据而导致 MCU 端无法及时处理的情况。

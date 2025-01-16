@@ -105,11 +105,12 @@ static int32_t at_sdio_read_data(uint8_t *data, int32_t len)
         }
 
         esp_at_sdio_list_t *p_list = sp_head;
-        if (len < p_list->left_len) {
-            memcpy(data + copy_len, p_list->pbuf + p_list->pos, len);
-            p_list->pos += len;
-            p_list->left_len -= len;
-            copy_len += len;
+        uint32_t to_read_len = len - copy_len;
+        if (to_read_len < p_list->left_len) {
+            memcpy(data + copy_len, p_list->pbuf + p_list->pos, to_read_len);
+            p_list->pos += to_read_len;
+            p_list->left_len -= to_read_len;
+            copy_len += to_read_len;
         } else {
             memcpy(data + copy_len, p_list->pbuf + p_list->pos, p_list->left_len);
             p_list->pos += p_list->left_len;
@@ -145,7 +146,7 @@ static void at_sdio_task(void *params)
             continue;
         }
 
-        esp_at_sdio_list_t *p_list = container_of(addr, esp_at_sdio_list_t, pbuf);
+        esp_at_sdio_list_t *p_list = container_of((uint8_t(*)[CONFIG_AT_SDIO_BLOCK_SIZE])addr, esp_at_sdio_list_t, pbuf);
         p_list->handle = handle;
         p_list->left_len = size;
         p_list->pos = 0;

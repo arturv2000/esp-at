@@ -2,7 +2,7 @@
 
 # The following lines of boilerplate have to be in your project's CMakeLists
 # in this exact order for cmake to work correctly
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
 set(IDF_PATH ${CMAKE_SOURCE_DIR}/esp-idf)
 
@@ -30,16 +30,14 @@ endif()
 
 # set the sdkconfig default file
 if (${SILENCE} EQUAL 1)
+    set(SDKCONFIG_DEFAULTS ${ESP_AT_MODULE_CONFIG_DIR}/sdkconfig_silence.defaults)
     if(DEFINED ENV{AT_EXT_MODULE_CFG} AND EXISTS "$ENV{AT_EXT_MODULE_CFG}/sdkconfig_silence.defaults")
-        set(SDKCONFIG_DEFAULTS $ENV{AT_EXT_MODULE_CFG}/sdkconfig_silence.defaults)
-    else()
-        set(SDKCONFIG_DEFAULTS ${ESP_AT_MODULE_CONFIG_DIR}/sdkconfig_silence.defaults)
+        list(APPEND SDKCONFIG_DEFAULTS $ENV{AT_EXT_MODULE_CFG}/sdkconfig_silence.defaults)
     endif()
 else()
+    set(SDKCONFIG_DEFAULTS ${ESP_AT_MODULE_CONFIG_DIR}/sdkconfig.defaults)
     if(DEFINED ENV{AT_EXT_MODULE_CFG} AND EXISTS "$ENV{AT_EXT_MODULE_CFG}/sdkconfig.defaults")
-        set(SDKCONFIG_DEFAULTS $ENV{AT_EXT_MODULE_CFG}/sdkconfig.defaults)
-    else()
-        set(SDKCONFIG_DEFAULTS ${ESP_AT_MODULE_CONFIG_DIR}/sdkconfig.defaults)
+        list(APPEND SDKCONFIG_DEFAULTS $ENV{AT_EXT_MODULE_CFG}/sdkconfig.defaults)
     endif()
 endif()
 message(STATUS "silence:${SILENCE}, sdkconfig:${SDKCONFIG_DEFAULTS}")
@@ -63,6 +61,11 @@ execute_process(COMMAND git rev-parse --short HEAD
 
 add_compile_options("-DESP_AT_PROJECT_COMMIT_ID=\"${ESP_AT_PROJECT_COMMIT_ID}\"")
 
+# set the firmware source
+if (DEFINED ENV{ESP_AT_FIRMWARE_FROM})
+set(ESP_AT_FIRMWARE_FROM $ENV{ESP_AT_FIRMWARE_FROM})
+add_compile_options("-DESP_AT_FIRMWARE_FROM=\"${ESP_AT_FIRMWARE_FROM}\"")
+endif()
 
 # get branch name and set docs version
 if(NOT DEFINED ENV{ESP_AT_PROJECT_BRANCH})
@@ -108,8 +111,13 @@ endif()
 
 # add the extra custom components
 if (DEFINED ENV{AT_CUSTOM_COMPONENTS})
-    list(APPEND EXTRA_COMPONENT_DIRS $ENV{AT_CUSTOM_COMPONENTS})
-    message("add extra custom components: $ENV{AT_CUSTOM_COMPONENTS}")
+    set(AT_CUSTOM_COMPONENTS "$ENV{AT_CUSTOM_COMPONENTS}")
+    string(STRIP "${AT_CUSTOM_COMPONENTS}" AT_CUSTOM_COMPONENTS)
+    while("${AT_CUSTOM_COMPONENTS}" MATCHES "  ")
+        string(REPLACE "  " " " AT_CUSTOM_COMPONENTS "${AT_CUSTOM_COMPONENTS}")
+    endwhile()
+    string(REPLACE " " ";" AT_CUSTOM_COMPONENTS "${AT_CUSTOM_COMPONENTS}")
+    list(APPEND EXTRA_COMPONENT_DIRS ${AT_CUSTOM_COMPONENTS})
 endif()
 
 if (EXTRA_COMPONENT_DIRS)

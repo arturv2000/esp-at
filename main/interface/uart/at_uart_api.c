@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +16,10 @@
 #include "esp_at.h"
 #include "at_uart.h"
 #include "driver/uart.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+#include "soc/uart_reg.h"
+#endif
 
 // static variables
 static const uint8_t g_at_uart_parity_table[] = {UART_PARITY_DISABLE, UART_PARITY_ODD, UART_PARITY_EVEN};
@@ -243,17 +247,26 @@ void at_uart_workaround(void)
     // a workaround for uart1 outputs uninterrupted data during light-sleep
     PIN_SLP_INPUT_ENABLE(GPIO_PIN_MUX_REG[g_uart_port_pin.rx_pin]);
     gpio_sleep_set_pull_mode(g_uart_port_pin.rx_pin, GPIO_PULLUP_ONLY);
+
+    // a workaround for uart1 tx voltage fluctuation issue during light-sleep
+    gpio_sleep_sel_dis(g_uart_port_pin.tx_pin);
 }
 
 void at_uart_config_init(uart_config_t *config)
 {
+    memset(config, 0x0, sizeof(uart_config_t));
     config->baud_rate = at_mfg_uart_baudrate_get();
     config->data_bits = CONFIG_AT_UART_DEFAULT_DATABITS - 5;
     config->parity = at_uart_parity_get(CONFIG_AT_UART_DEFAULT_PARITY_BITS);
     config->stop_bits = CONFIG_AT_UART_DEFAULT_STOPBITS;
     config->flow_ctrl = CONFIG_AT_UART_DEFAULT_FLOW_CONTROL;
     config->rx_flow_ctrl_thresh = 122;
+
+#if SOC_UART_SUPPORT_XTAL_CLK
+    config->source_clk = UART_SCLK_XTAL;
+#else
     config->source_clk = UART_SCLK_DEFAULT;
+#endif
 }
 
 void at_nvs_uart_config_set(uart_config_t *config)

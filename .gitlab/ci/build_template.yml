@@ -4,12 +4,13 @@
 # common build template #
 #########################
 .speedup_repo_clone: &speedup_repo_clone
-  - get_module_cfg_dir
-  - sed -i "s?https://github.com?$GITLAB_SSH_SERVER?g" module_config/${module_cfg_dir}/IDF_VERSION
+  - get_module_configs
+  - sed -i "s?https://github.com?$GITLAB_SSH_SERVER?g" ${module_cfg_dir}/IDF_VERSION
 
 .setup_env_variables: &setup_env_variables
   - export HAS_IDF_PREREQUISITES=1
   - export ESP_AT_PROJECT_BRANCH=${CI_COMMIT_REF_NAME}
+  - export ESP_AT_FIRMWARE_FROM=${AT_FIRMWARE_FROM}
 
 .clone_repo_and_components: &clone_repo_and_components
   - *speedup_repo_clone
@@ -83,6 +84,8 @@
   - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32C2_2MB \"$ESP32C2_2MB_TOKEN\"" >> at_ota_token.h
   - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32C2_4MB \"$ESP32C2_4MB_TOKEN\"" >> at_ota_token.h
   - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32C2_4MB \"$ESP32C2_4MB_TOKEN\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32C2_4MB_G2 \"$ESP32C2_4MB_G2_TOKEN\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32C2_4MB_G2 \"$ESP32C2_4MB_G2_TOKEN\"" >> at_ota_token.h
   - cd -
 
 .setup_tokens_esp32c3: &setup_tokens_esp32c3
@@ -92,6 +95,13 @@
   - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32C3_MINI \"$AT_OTA_TOKEN_ESP32C3_MINI\"" >> at_ota_token.h
   - cd -
 
+.setup_tokens_esp32c5: &setup_tokens_esp32c5
+  - cd components/at/private_include
+  - rm -f at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32C5_4MB \"$AT_OTA_TOKEN_ESP32C5_4MB\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32C5_4MB \"$AT_OTA_TOKEN_ESP32C5_4MB\"" >> at_ota_token.h
+  - cd -
+
 .setup_tokens_esp32c6: &setup_tokens_esp32c6
   - cd components/at/private_include
   - rm -f at_ota_token.h
@@ -99,62 +109,81 @@
   - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32C6_4MB \"$ESP32C6_4MB_TOKEN\"" >> at_ota_token.h
   - cd -
 
+.setup_tokens_esp32s2: &setup_tokens_esp32s2
+  - cd components/at/private_include
+  - rm -f at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32S2_WROOM \"$AT_OTA_TOKEN_ESP32S2_WROOM\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32S2_WROOM \"$AT_OTA_TOKEN_ESP32S2_WROOM\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32S2_WROVER \"$AT_OTA_TOKEN_ESP32S2_WROVER\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32S2_WROVER \"$AT_OTA_TOKEN_ESP32S2_WROVER\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32S2_SOLO \"$AT_OTA_TOKEN_ESP32S2_SOLO\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32S2_SOLO \"$AT_OTA_TOKEN_ESP32S2_SOLO\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_TOKEN_ESP32S2_MINI \"$AT_OTA_TOKEN_ESP32S2_MINI\"" >> at_ota_token.h
+  - echo -e "#define CONFIG_ESP_AT_OTA_SSL_TOKEN_ESP32S2_MINI \"$AT_OTA_TOKEN_ESP32S2_MINI\"" >> at_ota_token.h
+  - cd -
+
 #############################
 # Update sdkconfig.defaults #
 #############################
 .enable_all_wifi_cmds: &enable_all_wifi_cmds
-  - echo -e "CONFIG_AT_WS_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_FS_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_DRIVER_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_EAP_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_WEB_SERVER_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_WEB_CAPTIVE_PORTAL_ENABLE=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
+  - echo -e "CONFIG_AT_WS_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_FS_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_DRIVER_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_EAP_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_WEB_SERVER_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_WEB_CAPTIVE_PORTAL_ENABLE=y" >> ${at_sdkconfig_file}
 
 .disable_all_wifi_cmds: &disable_all_wifi_cmds
-  - echo -e "CONFIG_AT_WS_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_FS_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_ETHERNET_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_EAP_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_DRIVER_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_WEB_SERVER_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_WEB_CAPTIVE_PORTAL_ENABLE=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_OTA_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_MDNS_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_WPS_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_SMARTCONFIG_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_PING_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_MQTT_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_HTTP_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_SIGNALING_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_ESP_WIFI_SLP_IRAM_OPT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
+  - echo -e "CONFIG_AT_WS_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_FS_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_ETHERNET_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_EAP_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_DRIVER_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_WEB_SERVER_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_WEB_CAPTIVE_PORTAL_ENABLE=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_OTA_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_MDNS_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_WPS_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_SMARTCONFIG_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_PING_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_MQTT_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_HTTP_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_SIGNALING_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_ESP_WIFI_SLP_IRAM_OPT=n" >> ${at_sdkconfig_file}
 
 .enable_ethernet_cmds: &enable_ethernet_cmds
-  - echo -e "CONFIG_AT_ETHERNET_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
+  - echo -e "CONFIG_AT_ETHERNET_SUPPORT=y" >> ${at_sdkconfig_file}
 
 .enable_bt_cmds: &enable_bt_cmds
-  - echo -e "CONFIG_AT_BT_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_BT_SPP_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_BT_A2DP_COMMAND_SUPPORT=y" >> module_config/${module_cfg_dir}/sdkconfig.defaults
+  - echo -e "CONFIG_AT_BT_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_BT_SPP_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_BT_A2DP_COMMAND_SUPPORT=y" >> ${at_sdkconfig_file}
 
 .disable_ble_cmds: &disable_ble_cmds
-  - echo -e "CONFIG_AT_BLE_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_BLE_HID_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_BLUFI_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
-  - echo -e "CONFIG_AT_BT_COMMAND_SUPPORT=n" >> module_config/${module_cfg_dir}/sdkconfig.defaults
+  - echo -e "CONFIG_AT_BLE_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_BLE_HID_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_BLUFI_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_BT_COMMAND_SUPPORT=n" >> ${at_sdkconfig_file}
 
 .enable_40mhz_xtal: &enable_40mhz_xtal
-  - echo -e "CONFIG_XTAL_FREQ_40=y" >> module_config/module_esp32c2_default/sdkconfig.defaults
+  - echo -e "CONFIG_XTAL_FREQ_40=y" >> ${at_sdkconfig_file}
+
+.enable_at_debugs: &enable_at_debugs
+  - echo -e "CONFIG_LOG_DEFAULT_LEVEL_INFO=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_DEBUG=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_WIFI_DUMP_STATIS_DEBUG=y" >> ${at_sdkconfig_file}
+  - echo -e "CONFIG_AT_NET_DEBUG=y" >> ${at_sdkconfig_file}
 
 #########################
 # Enlarge app partition #
 #########################
 .enlarge_app_partition: &enlarge_app_partition
-  - app0_size=`cat module_config/${module_cfg_dir}/partitions_at.csv | grep ota_0 | awk -F, '{print $5}'`
-  - app1_size=`cat module_config/${module_cfg_dir}/partitions_at.csv | grep ota_1 | awk -F, '{print $5}'`
+  - app0_size=`cat ${module_cfg_dir}/partitions_at.csv | grep ota_0 | awk -F, '{print $5}'`
+  - app1_size=`cat ${module_cfg_dir}/partitions_at.csv | grep ota_1 | awk -F, '{print $5}'`
   - to_set_size=$((app0_size + app1_size))
-  - sed -i '/ota_1/d' module_config/${module_cfg_dir}/partitions_at.csv
+  - sed -i '/ota_1/d' ${module_cfg_dir}/partitions_at.csv
   - to_set_hex_size=`printf "0x%x" ${to_set_size}`
-  - sed -i '/ota_0/s,'"$app0_size"','"$to_set_hex_size"',g' module_config/${module_cfg_dir}/partitions_at.csv
+  - sed -i '/ota_0/s,'"$app0_size"','"$to_set_hex_size"',g' ${module_cfg_dir}/partitions_at.csv
 
 ##################
 # Before scripts #
@@ -177,18 +206,37 @@
     - add_gitlab_ssh_keys
     - *setup_tokens_esp32c3
 
+.before_script_esp32c5:
+  before_script:
+    - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
+    - add_gitlab_ssh_keys
+    - *setup_tokens_esp32c5
+
 .before_script_esp32c6:
   before_script:
     - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
     - add_gitlab_ssh_keys
     - *setup_tokens_esp32c6
 
-.before_script_esp32_enable_all_wifi_cmds:
+.before_script_esp32s2:
   before_script:
     - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
     - add_gitlab_ssh_keys
-    - get_module_cfg_dir
-    - *setup_tokens_esp32
+    - *setup_tokens_esp32s2
+
+.before_script_enable_at_debugs:
+  before_script:
+    - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
+    - add_gitlab_ssh_keys
+    - get_module_configs
+    - *enable_at_debugs
+    - *enlarge_app_partition
+
+.before_script_enable_all_wifi_cmds:
+  before_script:
+    - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
+    - add_gitlab_ssh_keys
+    - get_module_configs
     - *enable_all_wifi_cmds
     - *disable_ble_cmds
     - *enlarge_app_partition
@@ -197,7 +245,7 @@
   before_script:
     - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
     - add_gitlab_ssh_keys
-    - get_module_cfg_dir
+    - get_module_configs
     - *setup_tokens_esp32
     - *enable_bt_cmds
     - *disable_all_wifi_cmds
@@ -207,7 +255,7 @@
   before_script:
     - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
     - add_gitlab_ssh_keys
-    - get_module_cfg_dir
+    - get_module_configs
     - *setup_tokens_esp32
     - *enable_ethernet_cmds
     - *enlarge_app_partition
@@ -216,25 +264,9 @@
   before_script:
     - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
     - add_gitlab_ssh_keys
+    - get_module_configs
     - *setup_tokens_esp32c2
     - *enable_40mhz_xtal
-
-.before_script_esp32c2_enable_all_wifi_cmds:
-  before_script:
-    - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
-    - add_gitlab_ssh_keys
-    - get_module_cfg_dir
-    - *setup_tokens_esp32c2
-    - *enable_all_wifi_cmds
-
-.before_script_esp32c3_enable_all_wifi_cmds:
-  before_script:
-    - source ${CI_PROJECT_DIR}/.gitlab/ci/utils.sh
-    - add_gitlab_ssh_keys
-    - get_module_cfg_dir
-    - *setup_tokens_esp32c3
-    - *enable_all_wifi_cmds
-    - *enlarge_app_partition
 
 #####################
 # Build at examples #
@@ -282,10 +314,27 @@
     PLATFORM: "PLATFORM_ESP32C3"
     SILENCE: "0"
 
+.build_template_esp32c5:
+  extends:
+    - .build_template
+    - .before_script_esp32c5
+  image: $CI_DOCKER_REGISTRY/esp-env-v5.4:1
+  variables:
+    PLATFORM: "PLATFORM_ESP32C5"
+    SILENCE: "0"
+
 .build_template_esp32c6:
   extends:
     - .build_template
     - .before_script_esp32c6
   variables:
     PLATFORM: "PLATFORM_ESP32C6"
+    SILENCE: "0"
+
+.build_template_esp32s2:
+  extends:
+    - .build_template
+    - .before_script_esp32s2
+  variables:
+    PLATFORM: "PLATFORM_ESP32S2"
     SILENCE: "0"

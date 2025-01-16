@@ -3,7 +3,7 @@ push_to_github:
     - .rules:protected
   stage: deploy
   tags:
-    - deploy
+    - internet
   when: on_success
   image: $CI_DOCKER_REGISTRY/esp-env-v4.4:1
   variables:
@@ -20,7 +20,7 @@ push_to_github:
   stage: deploy_docs
   image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.0:4-4
   tags:
-    - deploy
+    - internet
   needs:
     - build_docs_html
     - build_docs_pdf
@@ -38,7 +38,7 @@ deploy_docs_preview:
   variables:
     TYPE: "preview"
     DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
-    DOCS_DEPLOY_PRIVATEKEY: "$DOCS_PREVIEW_DEPLOY_KEY"
+    DOCS_DEPLOY_PRIVATEKEY: "$DOCS_PREVIEW_PRIVATEKEY"
     DOCS_DEPLOY_SERVER: "$DOCS_PREVIEW_SERVER"
     DOCS_DEPLOY_SERVER_USER: "$DOCS_PREVIEW_SERVER_USER"
     DOCS_DEPLOY_PATH: "$DOCS_PREVIEW_PATH"

@@ -193,7 +193,9 @@ static void at_uart_init(void)
     at_uart_intr_config();
 
     // do some possible uart workarounds
+#ifndef CONFIG_IDF_TARGET_ESP32C5
     at_uart_workaround();
+#endif
 
     printf("AT cmd port:uart%d tx:%d rx:%d cts:%d rts:%d baudrate:%d\r\n",
            g_at_cmd_port, g_uart_port_pin.tx_pin, g_uart_port_pin.rx_pin,
@@ -276,6 +278,7 @@ void at_interface_init(void)
     esp_at_custom_ops_struct uart_hooks = {
         .status_callback = at_uart_transmit_mode_switch_cb,
         .pre_sleep_callback = NULL,
+        .pre_wakeup_callback = NULL,
         .pre_deepsleep_callback = at_uart_deepsleep_before_cb,
         .pre_restart_callback = at_uart_restart_before_cb,
         .pre_active_write_data_callback = NULL,

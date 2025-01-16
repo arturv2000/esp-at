@@ -22,7 +22,7 @@ Bluetooth® Low Energy AT Commands
     :esp32 or esp32c3 or esp32c6 or esp32c2: - :ref:`AT+BLECONN <cmd-BCONN>`: Establish Bluetooth LE connection.
     :esp32 or esp32c3 or esp32c6 or esp32c2: - :ref:`AT+BLECONNPARAM <cmd-BCONNP>`: Query/Update parameters of Bluetooth LE connection.
     :esp32 or esp32c3 or esp32c6 or esp32c2: - :ref:`AT+BLEDISCONN <cmd-BDISC>`: End Bluetooth LE connection.
-    :esp32 or esp32c3 or esp32c6: - :ref:`AT+BLEDATALEN <cmd-BDLEN>`: Set Bluetooth LE data packet length.
+    :esp32 or esp32c3 : - :ref:`AT+BLEDATALEN <cmd-BDLEN>`: Set Bluetooth LE data packet length.
     :esp32 or esp32c3 or esp32c6 or esp32c2: - :ref:`AT+BLECFGMTU <cmd-BMTU>`: Set Bluetooth LE MTU length.
     :esp32 or esp32c3 : - :ref:`AT+BLEGATTSSRVCRE <cmd-GSSRVCRE>`: Generic Attributes Server (GATTS) creates services.
     :esp32 or esp32c3 : - :ref:`AT+BLEGATTSSRVSTART <cmd-GSSRVSTART>`: GATTS starts services.
@@ -74,7 +74,7 @@ Introduction
  
  .. only:: esp32c2 or esp32c3 or esp32c6
 
-  Currently, AT firmware for {IDF_TARGET_NAME} supports `Bluetooth® Core Specification Version 5.0 <https://www.bluetooth.com/specifications/specs/core-specification-5/>`_.
+  Currently, AT firmware for {IDF_TARGET_NAME} supports `Bluetooth® Core Specification Version 5.0 <https://www.bluetooth.com/specifications/specs/core-specification-5-0/>`_.
 
 .. only:: esp32 or esp32c3 or esp32c6
 
@@ -162,7 +162,7 @@ Introduction
     Notes
     ^^^^^
 
-    -  When using Bluetooth LE function, if you do not need to use SoftAP mode, it is recommended to set Wi-Fi mode to NULL or station mode by using :ref:`AT+CWMODE <cmd-MODE>`.
+    -  To achieve better performance, it is recommended to disable SoftAP by sending the :ref:`AT+CWMODE=0/1 <cmd-MODE>` command before using Bluetooth LE function. For more details, please refer to the `RF Coexistence <https://docs.espressif.com/projects/esp-idf/en/latest/{IDF_TARGET_PATH_NAME}/api-guides/coexist.html>`_ documentation.
     -  Before using other Bluetooth LE AT commands, you should run this command first to trigger the initialization process.
     -  After the initialization, the Bluetooth LE role cannot be changed unless you run :ref:`AT+RST <cmd-RST>` to restart the system first and then re-initialize the Bluetooth LE role.
     -  Before you deinitialize the Bluetooth stack, it is recommended to stop broadcasting, stop scanning, and disconnect all existing connections.
@@ -1165,7 +1165,7 @@ Introduction
         AT+BLECONN=0,"24:0a:c4:09:34:23"
         AT+BLEDISCONN=0
 
-.. only:: esp32 or esp32c3 or esp32c6
+.. only:: esp32 or esp32c3
 
     .. _cmd-BDLEN:
 
@@ -2977,12 +2977,12 @@ Parameter
    -  6: WPA3_PSK
    -  7: WPA2_WPA3_PSK
 
-.. only:: esp32 or esp3c3
+Note
+^^^^
 
-    Note
-    ^^^^
-
-    - You can only start or stop BluFi when Bluetooth LE is not initialized (:ref:`AT+BLEINIT=0 <cmd-BINIT>`).
+- You can only start or stop BluFi when Bluetooth LE is not initialized (:ref:`AT+BLEINIT=0 <cmd-BINIT>`).
+- To achieve better performance, it is recommended to disable SoftAP by sending the :ref:`AT+CWMODE=0/1 <cmd-MODE>` command before using BluFi function. For more details, please refer to the `RF Coexistence <https://docs.espressif.com/projects/esp-idf/en/latest/{IDF_TARGET_PATH_NAME}/api-guides/coexist.html>`_ documentation.
+- After BluFi network configuration is completed, please send the :ref:`AT+BLUFI=0 <cmd-BLUFI>` command to disable BluFi and release resources.
 
 Example
 ^^^^^^^^

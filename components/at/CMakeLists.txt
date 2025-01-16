@@ -6,6 +6,10 @@ if ("${IDF_TARGET}" STREQUAL "esp32")
     list(APPEND require_components esp_eth)
 endif()
 
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.4")
+    list(APPEND require_components esp_hw_support)
+endif()
+
 set(srcs "")
 list(APPEND srcs "src/at_default_config.c")
 list(APPEND srcs "src/at_init.c")
@@ -38,6 +42,9 @@ if (CONFIG_AT_WEB_SERVER_SUPPORT)
 endif()
 if (CONFIG_AT_BASE_ON_UART)
     list(APPEND srcs "src/at_uart_cmd.c")
+endif()
+if (CONFIG_AT_SELF_COMMAND_SUPPORT)
+    list(APPEND srcs "src/at_self_cmd.c")
 endif()
 
 if (CONFIG_AT_WEB_SERVER_SUPPORT)
@@ -73,6 +80,8 @@ add_library(${LIBS} STATIC IMPORTED)
 set_property(TARGET ${LIBS} PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib${LIBS}.a)
 target_link_libraries(${COMPONENT_LIB} INTERFACE ${LIBS})
 set_property(TARGET ${LIBS} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${COMPONENT_LIB})
+
+target_link_options(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_partition_find_first")
 
 # force the referencing of some symbols
 include (force_symbol_ref.cmake)

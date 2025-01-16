@@ -39,6 +39,11 @@ config AT_COMMAND_TERMINATOR
     help
         Now just support one character, the range is from 0x01 to 0xFF.
 
+config AT_SELF_COMMAND_SUPPORT
+    bool "Support for executing AT commands from esp-at itself instead of external MCU."
+    default n
+    depends on AT_ENABLE
+
 config AT_BASE_COMMAND_SUPPORT
     bool "AT base command support."
     default "y"
@@ -131,12 +136,24 @@ config AT_MQTT_CLIENT_AUTH_BROKER
 endmenu
 
 config AT_HTTP_COMMAND_SUPPORT
-    bool "AT http command support."
+    bool "AT HTTP command support."
     default "n"
     depends on AT_ENABLE
     help
         Please enlarge AT_PROCESS_TASK_STACK_SIZE to be more than 4096 if HTTPS link need to establish,
         otherwise, unexpected crash probably occur due to AT process task overflow.
+
+menu "AT HTTP authentication method"
+    depends on AT_HTTP_COMMAND_SUPPORT
+
+config AT_HTTPS_SERVER_AUTH_CLIENT
+    bool "HTTPS server authenticates clients"
+    default n
+
+config AT_HTTPS_CLIENT_AUTH_SERVER
+    bool "HTTPS client authenticates server"
+    default n
+endmenu
 
 config AT_HTTP_TX_BUFFER_SIZE
     int "Default HTTP TX buffer size"
@@ -156,6 +173,18 @@ config AT_WS_COMMAND_SUPPORT
     bool "AT WebSocket command support."
     default "n"
     depends on AT_ENABLE
+
+menu "AT WebSocket authentication method"
+    depends on AT_WS_COMMAND_SUPPORT
+
+config AT_WSS_SERVER_AUTH_CLIENT
+    bool "Server authenticates clients"
+    default y
+
+config AT_WSS_CLIENT_AUTH_SERVER
+    bool "Client authenticates server"
+    default y
+endmenu
 
 config AT_BLE_COMMAND_SUPPORT
     bool "AT ble command support."

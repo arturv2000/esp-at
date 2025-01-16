@@ -39,7 +39,9 @@ typedef struct {
     bool (*wait_write_complete)(int32_t timeout_msec);              /*!< wait write finish */
 } esp_at_device_ops_struct;
 
+typedef int32_t (*at_read_data_fn_t)(uint8_t *data, int32_t len);
 typedef int32_t (*at_write_data_fn_t)(uint8_t *data, int32_t len);
+typedef int32_t (*at_get_data_len_fn_t)(void);
 
 /**
  * @brief esp_at_custom_net_ops_struct
@@ -88,7 +90,8 @@ typedef enum {
  */
 typedef struct {
     void (*status_callback)(esp_at_status_type status);               /*!< callback when AT status changes */
-    void (*pre_sleep_callback)(at_sleep_mode_t mode);                 /*!< callback before enter modem sleep and light sleep */
+    void (*pre_sleep_callback)(at_sleep_mode_t mode);                 /*!< callback before entering light sleep */
+    void (*pre_wakeup_callback)(void);                                /*!< callback before waking up from light sleep */
     void (*pre_deepsleep_callback)(void);                             /*!< callback before enter deep sleep */
     void (*pre_restart_callback)(void);                               /*!< callback before restart */
     void (*pre_active_write_data_callback)(at_write_data_fn_t);       /*!< callback before write data */
@@ -449,5 +452,40 @@ const uint8_t* esp_at_get_current_cmd_name(void);
  * - others : fail
  */
 int32_t esp_at_get_core_version(char *buffer, uint32_t size);
+
+/**
+ * @brief Mount FATFS partition
+ *
+ * @note if you want to use FATFS, you should enable "AT FS command support" in menuconfig first.
+ * @note esp-at uses a fixed partition for the filesystem, which defined in esp-at/module_config/$your_module_config/at_customize.csv,
+ *       and uses a fixed mount point "/fatfs".
+ * @note when using FATFS, you should call this function to mount the partition first,
+ *       and call at_fatfs_unmount() to unmount the partition when you don't need it.
+ *
+ * @return
+ * - true : succeed
+ * - false : fail
+*/
+bool at_fatfs_mount(void);
+
+/**
+ * @brief Unmount FATFS partition
+ *
+ * @return
+ * - true : succeed
+ * - false : fail
+*/
+bool at_fatfs_unmount(void);
+
+/**
+ * @brief Check if the string is NULL
+ *
+ * @param str: the string to be checked
+ *
+ * @return
+ * - true : the string is NULL
+ * - false : the string is not NULL
+ */
+bool at_str_is_null(uint8_t *str);
 
 void at_handle_result_code(esp_at_result_code_string_index code, void *pbuf);

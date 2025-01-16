@@ -9,7 +9,7 @@ Here are five optional configurations that you may want to override, and you can
 - You must use the same filename and directory name to override.
 
 #### 2.1 Override the system configuration
-The native system configuration file is `esp-at/module_config/<your_module>/sdkconfig.defaults` (disable silence mode) or `esp-at/module_config/<your_module>/sdkconfig_silence.defaults` (enable silence mode). You may want to enable or disable some features, for example, to enable WebSocket functionality and disable mDNS functionality. You can copy the native system configuration file to `at_override_module_config` directory, and add the following lines to `at_override_module_config/sdkconfig.defaults` file:
+The native system configuration file is `esp-at/module_config/<your_module>/sdkconfig.defaults` (disable silence mode) or `esp-at/module_config/<your_module>/sdkconfig_silence.defaults` (enable silence mode). You may want to enable or disable some features, for example, to enable WebSocket functionality and disable mDNS functionality. You can add a new system configuration file to `at_override_module_config` directory, and add the following lines to `at_override_module_config/sdkconfig.defaults` file:
 
 ```
 # Enable WebSocket and disable mDNS
@@ -17,7 +17,7 @@ CONFIG_AT_WS_COMMAND_SUPPORT=y
 CONFIG_AT_MDNS_COMMAND_SUPPORT=n
 ```
 
-The build system will use `at_override_module_config/sdkconfig.defaults` as your system configuration.
+The build system will override `at_override_module_config/sdkconfig.defaults` as your system configuration.
 
 #### 2.2 Override the patch directory
 The native patch directory is `esp-at/module_config/<your_module>/patch`. You may want to add more patches, for example, to output one prompt message after esp-at is ready. You can copy the native patch directory to `at_override_module_config` directory, and add the `at_example.patch` file to `at_override_module_config/patch`, then specify this patch by adding the following lines to `at_override_module_config/patch/patch_list.ini` file:
@@ -69,8 +69,8 @@ The build system will use `at_override_module_config/at_customize.csv` as your s
 It is strongly recommended to use the default `ESP-IDF` version of the `ESP-AT` project, and **NOT** recommended to update it (because of the potential [application binary interface](https://en.wikipedia.org/wiki/Application_binary_interface) incompatibility between the underlying ESP-IDF versions of `libesp_at_core.a` and the esp-at repository, which may cause incorrect operation of the firmware.), but we still keep the option to update the ESP-IDF for testing purposes. The native esp-idf version file is `esp-at/module_config/<your_module>/IDF_VERSION`. You can copy the native esp-idf version to `at_override_module_config/IDF_VERSION`, and keep it as it is.
 
 ```
-branch:release/v5.0
-commit:bcca689866db3dfda47f77670bf8df2a7ec94721
+branch:release/v5.1
+commit:64849cb7039a93b7b3a4ad8e8da328fa9c09c5e7
 repository:https://github.com/espressif/esp-idf.git
 ```
 
